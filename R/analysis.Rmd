@@ -1,0 +1,294 @@
+---
+title: "Descriptive report"
+author: 'Valentina Andrade'
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    depth: 2
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_float: yes
+  word_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+subtitle: Health and Social Inequality
+lang: es-CL
+always_allow_html: yes
+---
+```{r, echo=FALSE, eval = FALSE}
+htmltools::img(src = knitr::image_uri("../input/css/icon-192.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;')
+```
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F, results = 'asis')
+
+library(knitr);  options(knitr.kable.NA = "No sabe/No responde", kableExtra.auto_format = FALSE, scipen = 999)
+
+library(ggplot2);library(ggthemes)
+theme_set(theme_hc() + theme(axis.title = element_text(size = 10)))
+```
+
+```{r packages, echo = F, message=FALSE, warning= F}
+# 1. Cargar paquetes
+pacman::p_load(rticles, tidyverse, kableExtra, sjmisc, car,ggsci, ggthemes)
+```
+
+```{r load, echo = F}
+load(file = "../input/data/proc/issp.Rdata")
+```
+
+```{r process, echo = F}
+issp <- issp %>% mutate(month = 1, day = 1) %>% 
+  unite(date, c(year,month,day), sep = "-") %>% 
+  mutate(date = as.Date(date))
+```
+
+
+# Justicia en Salud
+
+```{r, echo = F}
+issp %>% 
+  group_by(date, justsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>% 
+ggplot(aes(x = date, y = prop,  color = justsalud)) +
+  geom_point(size = 3)  +
+  geom_line() +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) )+
+  scale_x_date(name = "", breaks = issp$date, date_labels = "%Y", expand = c(0.1,0)) +
+  scale_color_npg() +
+  labs(title = "¿Es justo o injusto, correcto o incorrecto, que las personas con ingresos más altos\n puedan pagar por una mejor atención de salud que las personas con ingresos más bajos?", caption = "Fuente: ISSP Social Inequality (1999, 2009, 2019) y ISSP Health and HealthCare (2011)")
+```
+
+```{r tabl, echo = F}
+issp_table <- issp %>% select(date, justsalud,  sex, age, educ) %>%
+  filter(date != "2011-1-1") %>% 
+  mutate(justsalud = as.numeric(justsalud),
+         justsalud = if_else(justsalud %in% c(5,4), "Muy injusto y algo injusto",
+                               ifelse(justsalud %in% c(1,2), "Muy justo y algo justo", "Ni justo ni injusto"))) %>% 
+  pivot_longer(cols = -c(date, justsalud) ,names_to = "variable", values_to = "values") %>% 
+  group_by(date, justsalud, variable, values) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  ungroup() %>% 
+  pivot_wider(names_from = c(date,justsalud),values_from = c(n,prop)) %>% 
+  select(1:2,starts_with("p"))
+
+issp_table$variable <- car::recode(issp_table$variable,
+                          "'educ'='Nivel\n educacional';
+                          'sex'='Sexo';
+                          'age'='Edad'", as.factor = T) 
+
+```
+
+```{r tab2, echo= F, results='asis'}
+issp_table %>%
+   knitr::kable(digits = 2, row.names = F,  booktabs = T,  format = "html",
+             col.names = c("Variable", "Valores", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)","Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)"),caption = "<b>Tabla 1</b>: Estadísticos descriptivos para justicia en salud") %>%
+            add_header_above(c(" " = 2, "1999" = 3,"2009" = 3, "2019" = 3)) %>% 
+            kableExtra::kable_styling(bootstrap_options = c("striped", "hold_position"), full_width = F)  %>%
+   kableExtra::collapse_rows(columns = 1:2) %>% 
+            kableExtra::column_spec(1, width = "1cm") %>%
+  kableExtra::footnote(general = "Fuente: ISSP Social Inequality (1999, 2009, 2019)", general_title = "") 
+
+```
+
+# System health
+
+## Confidence in system health
+
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(confsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>% 
+ggplot(aes(x = str_wrap(confsalud,15), y = prop,  fill = confsalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  scale_color_npg() +
+  labs(title = "The health care system in Chile is...", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## ¿Need changes in system health?
+
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(cambiosalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>% 
+ggplot(aes(x = str_wrap(cambiosalud,15), y = prop,  fill = cambiosalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  scale_color_npg() +
+  labs(title = "Would you say the health care system in Chile ...", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## Role of government
+
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(gobiernosalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(gobiernosalud,15), rowname), y = prop,  fill = gobiernosalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  scale_color_npg() +
+  labs(title = "The government should provide only limited health care services", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## Inefficient health care system
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(inefsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(inefsalud,15), rowname), y = prop,  fill = inefsalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  scale_color_npg() +
+  labs(title = "In general, health care system in Chile is innefficient", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## Satisfaction with health care system
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(satsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(satsalud,15), rowname), y = prop,  fill = satsalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  scale_color_npg() +
+  labs(title = "In general, how satisfied or dissatisfied are you with the health care system in Chile", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+# Health insurance and health care system evaluation
+
+## Health justice and health insurance
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(prevsalud,justsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = justsalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  geom_text(aes(label = paste0(prop, "%")),
+            position = position_stack(vjust = .5),
+            color="white", size= 3.5, fontface = "bold",
+            show.legend = FALSE) +
+  scale_color_npg() +
+  labs(title = "Perception of health justice by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## Inefficiency and health insurance
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(prevsalud,inefsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = inefsalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  geom_text(aes(label = paste0(prop, "%")),
+            position = position_stack(vjust = .5),
+            color="white", size= 3.5, fontface = "bold",
+            show.legend = FALSE) +
+  scale_color_npg() +
+  labs(title = "Perception of health system inefficiency by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## Satisfaction and health insurance
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(prevsalud,satsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = satsalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  geom_text(aes(label = paste0(prop, "%")),
+            position = position_stack(vjust = .5),
+            color="white", size= 3.5, fontface = "bold",
+            show.legend = FALSE) +
+  scale_color_npg() +
+  labs(title = "Satisfaction - health system by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+## Changes and health insurance
+
+```{r, echo = F}
+issp11_w %>%
+  filter(C_ALPHAN == "CL") %>% 
+  group_by(prevsalud,cambiosalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>% 
+ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = cambiosalud)) +
+  geom_bar(color = "black", stat = "identity") +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
+  geom_text(aes(label = paste0(prop, "%")),
+            position = position_stack(vjust = .5),
+            color="white", size= 3.5, fontface = "bold",
+            show.legend = FALSE) +
+  scale_color_npg() +
+  labs(title = "Satisfaction - health system by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+```
+
+# Health Justice and countries
+
+[Country code](https://zacat.gesis.org/webview/index/en/ZACAT/ZACAT.c.ZACAT/ISSP.d.58/by-Module-Topic.d.70/Health.d.75/International-Social-Survey-Programme-Health-and-Health-Care-ISSP-2011.s.ZA5800/Archive-and-ID-variables.h.80/Country_Sample-see-V4-for-codes-for-whole-nation-states-/fVariable/ZA5800_V4)
+
+```{r countries, echo = FALSE}
+
+issp11_w %>%
+  group_by(C_ALPHAN) %>%
+  mutate(inefsalud = as.numeric(inefsalud),
+         justsalud = as.numeric(justsalud)) %>% 
+  summarise(inefsalud = mean(inefsalud, na.rm = T), justsalud = mean(justsalud, na.rm = T) ) %>% 
+ggplot(aes(x=inefsalud, y = justsalud, color = C_ALPHAN)) +
+  geom_point(alpha = 0.5, size = 2) + 
+  geom_text(aes(label = C_ALPHAN), vjust = 1.2,
+            color="black", size= 3.5, fontface = "bold",
+            show.legend = FALSE) +
+  scale_fill_npg() + guides(color = F) + 
+  labs(title = " Inefficiency health system and justices health perception (averiage by country)", y = "Justice\n(in average by country)", x= "Inneficiency (in average by country)", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+
+
+```
+
