@@ -30,12 +30,12 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F, results = 'asis')
 library(knitr);  options(knitr.kable.NA = "No sabe/No responde", kableExtra.auto_format = FALSE, scipen = 999)
 
 library(ggplot2);library(ggthemes)
-theme_set(theme_hc() + theme(axis.title = element_text(size = 10)))
+theme_set(theme_hc() + theme(axis.title = element_text(size = 9)))
 ```
 
 ```{r packages, echo = F, message=FALSE, warning= F}
 # 1. Cargar paquetes
-pacman::p_load(rticles, tidyverse, kableExtra, sjmisc, car,ggsci, ggthemes)
+pacman::p_load(rticles, tidyverse, kableExtra, sjmisc, car,ggsci, ggthemes, rvest)
 ```
 
 ```{r load, echo = F}
@@ -62,17 +62,36 @@ ggplot(aes(x = date, y = prop,  color = justsalud)) +
   scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) )+
   scale_x_date(name = "", breaks = issp$date, date_labels = "%Y", expand = c(0.1,0)) +
   scale_color_npg() +
-  labs(title = "¿Es justo o injusto, correcto o incorrecto, que las personas con ingresos más altos\n puedan pagar por una mejor atención de salud que las personas con ingresos más bajos?", caption = "Fuente: ISSP Social Inequality (1999, 2009, 2019) y ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 1. ¿Es justo o injusto, correcto o incorrecto, que las personas con ingresos más altos\n puedan pagar por una mejor atención de salud que las personas con ingresos más bajos?", caption = "Fuente: ISSP Social Inequality (1999, 2009, 2019) y ISSP Health and HealthCare (2011)")
 ```
 
+```{r, echo = F}
+issp %>%
+  mutate(justsalud = as.numeric(justsalud),
+         justsalud = if_else(justsalud %in% c(5,4), "Muy injusto y algo injusto",
+                               ifelse(justsalud %in% c(1,2), "Muy justo y algo justo", "Ni justo ni injusto"))) %>% 
+  group_by(date, justsalud) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n/sum(n),3)*100) %>% 
+ggplot(aes(x = date, y = prop,  color = justsalud)) +
+  geom_point(size = 3)  +
+  geom_line() +
+  scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) )+
+  scale_x_date(name = "", breaks = issp$date, date_labels = "%Y", expand = c(0.1,0)) +
+  scale_color_npg(name = "") +
+  labs(title = "Figura 2. ¿Es justo o injusto, correcto o incorrecto, que las personas con ingresos más altos\n puedan pagar por una mejor atención de salud que las personas con ingresos más bajos?", caption = "Fuente: ISSP Social Inequality (1999, 2009, 2019) y ISSP Health and HealthCare (2011)")
+```
+
+
+
 ```{r tabl, echo = F}
-issp_table <- issp %>% select(date, justsalud,  sex, age, educ) %>%
+issp_table <- issp %>% select(date, justsalud,  sex, age, educ, region_rm) %>%
   filter(date != "2011-1-1") %>% 
   mutate(justsalud = as.numeric(justsalud),
          justsalud = if_else(justsalud %in% c(5,4), "Muy injusto y algo injusto",
                                ifelse(justsalud %in% c(1,2), "Muy justo y algo justo", "Ni justo ni injusto"))) %>% 
   pivot_longer(cols = -c(date, justsalud) ,names_to = "variable", values_to = "values") %>% 
-  group_by(date, justsalud, variable, values) %>% 
+  group_by(date, variable, values,justsalud, ) %>% 
   summarise(n = n()) %>% 
   mutate(prop = round(n/sum(n),3)*100) %>%
   ungroup() %>% 
@@ -82,17 +101,18 @@ issp_table <- issp %>% select(date, justsalud,  sex, age, educ) %>%
 issp_table$variable <- car::recode(issp_table$variable,
                           "'educ'='Nivel\n educacional';
                           'sex'='Sexo';
-                          'age'='Edad'", as.factor = T) 
+                          'age'='Edad';
+                          'region_rm'='Región'", as.factor = T) 
 
 ```
 
 ```{r tab2, echo= F, results='asis'}
 issp_table %>%
    knitr::kable(digits = 2, row.names = F,  booktabs = T,  format = "html",
-             col.names = c("Variable", "Valores", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)","Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)"),caption = "<b>Tabla 1</b>: Estadísticos descriptivos para justicia en salud") %>%
+             col.names = c("Variable", "Valores", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)","Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)"),caption = "<b>Tabla 1</b>: Estadísticos descriptivos para justicia en salud") %>% 
+   kableExtra::collapse_rows(columns = 1:2, row_group_label_position = 'stack') %>% 
             add_header_above(c(" " = 2, "1999" = 3,"2009" = 3, "2019" = 3)) %>% 
-            kableExtra::kable_styling(bootstrap_options = c("striped", "hold_position"), full_width = F)  %>%
-   kableExtra::collapse_rows(columns = 1:2) %>% 
+            kableExtra::kable_styling(bootstrap_options = c("striped", "hold_position"), full_width = F)   %>% 
             kableExtra::column_spec(1, width = "1cm") %>%
   kableExtra::footnote(general = "Fuente: ISSP Social Inequality (1999, 2009, 2019)", general_title = "") 
 
@@ -113,7 +133,7 @@ ggplot(aes(x = str_wrap(confsalud,15), y = prop,  fill = confsalud)) +
   geom_bar(color = "black", stat = "identity") +
   scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
   scale_color_npg() +
-  labs(title = "The health care system in Chile is...", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 3. The health care system in Chile is...", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## ¿Need changes in system health?
@@ -129,7 +149,7 @@ ggplot(aes(x = str_wrap(cambiosalud,15), y = prop,  fill = cambiosalud)) +
   geom_bar(color = "black", stat = "identity") +
   scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
   scale_color_npg() +
-  labs(title = "Would you say the health care system in Chile ...", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 4. Would you say the health care system in Chile ...", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## Role of government
@@ -147,7 +167,7 @@ ggplot(aes(x = reorder(str_wrap(gobiernosalud,15), rowname), y = prop,  fill = g
   geom_bar(color = "black", stat = "identity") +
   scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
   scale_color_npg() +
-  labs(title = "The government should provide only limited health care services", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 5. The government should provide only limited health care services", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## Inefficient health care system
@@ -164,7 +184,7 @@ ggplot(aes(x = reorder(str_wrap(inefsalud,15), rowname), y = prop,  fill = inefs
   geom_bar(color = "black", stat = "identity") +
   scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
   scale_color_npg() +
-  labs(title = "In general, health care system in Chile is innefficient", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 6. In general, health care system in Chile is innefficient", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## Satisfaction with health care system
@@ -181,7 +201,7 @@ ggplot(aes(x = reorder(str_wrap(satsalud,15), rowname), y = prop,  fill = satsal
   geom_bar(color = "black", stat = "identity") +
   scale_y_continuous(name = "",labels = function(x) paste0(x,"%" ) ) +
   scale_color_npg() +
-  labs(title = "In general, how satisfied or dissatisfied are you with the health care system in Chile", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 7. In general, how satisfied or dissatisfied are you with the health care system in Chile", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 # Health insurance and health care system evaluation
@@ -204,7 +224,7 @@ ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = justs
             color="white", size= 3.5, fontface = "bold",
             show.legend = FALSE) +
   scale_color_npg() +
-  labs(title = "Perception of health justice by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 8. Perception of health justice by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## Inefficiency and health insurance
@@ -225,7 +245,7 @@ ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = inefs
             color="white", size= 3.5, fontface = "bold",
             show.legend = FALSE) +
   scale_color_npg() +
-  labs(title = "Perception of health system inefficiency by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 9. Perception of health system inefficiency by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## Satisfaction and health insurance
@@ -246,7 +266,7 @@ ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = satsa
             color="white", size= 3.5, fontface = "bold",
             show.legend = FALSE) +
   scale_color_npg() +
-  labs(title = "Satisfaction - health system by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 10. Satisfaction - health system by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 ## Changes and health insurance
@@ -267,10 +287,38 @@ ggplot(aes(x = reorder(str_wrap(prevsalud,15), rowname), y = prop,  fill = cambi
             color="white", size= 3.5, fontface = "bold",
             show.legend = FALSE) +
   scale_color_npg() +
-  labs(title = "Satisfaction - health system by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
+  labs(title = "Figura 11. Satisfaction - health system by health insurance", x= "", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 
 # Health Justice and countries
+
+```{r table3,  echo= FALSE}
+iso <- read_html('https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2') %>% 
+    html_node('.wikitable.sortable') %>% 
+    html_table()
+iso <- iso %>% group_by(Code) %>% 
+  filter(Year == max(Year)) %>% 
+  select(C_ALPHAN =Code, country_name = "Country name (using title case)" )
+
+issp11_w %>%
+  group_by(C_ALPHAN, justsalud) %>% 
+  summarise(n = n()) %>%
+  mutate(prop = round(n/sum(n),3)*100) %>%
+  left_join(iso, by = "C_ALPHAN") %>% 
+  mutate(country_name = if_else(C_ALPHAN== "BE-FLA", "Belgium/Flanders",
+                                if_else(C_ALPHAN== "BE-WAL", "Belgium",
+                                        if_else(C_ALPHAN == "DE-E", "Germany-East",
+                                                if_else(C_ALPHAN == "DE-W", "Germany-West", if_else(C_ALPHAN == "GB-GBN", "Great Britain", country_name)))))) %>% ungroup() %>% 
+  select(country_name, justsalud, prop) %>%
+  pivot_wider(names_from = "justsalud", values_from = prop) %>% 
+  knitr::kable(digits = 2, row.names = F,  booktabs = T,  format = "html",
+             col.names = c("País", "Muy injusto(%)", "Algo injusto (%)", "Ni injusto ni justo (%)","Algo justo (%)", "Muy justo(%)", "No sabe/No responde"),caption = "<b>Tabla 2</b>: Distribución de respuesta sobre justicia en salud según país") %>% 
+            kableExtra::kable_styling(bootstrap_options = c("striped", "hold_position"), full_width = F)   %>% 
+            kableExtra::column_spec(1, width = "1cm") %>%
+  kableExtra::footnote(general = "Fuente: ISSP Health and Health Care (2011)", general_title = "") 
+
+
+```
 
 [Country code](https://zacat.gesis.org/webview/index/en/ZACAT/ZACAT.c.ZACAT/ISSP.d.58/by-Module-Topic.d.70/Health.d.75/International-Social-Survey-Programme-Health-and-Health-Care-ISSP-2011.s.ZA5800/Archive-and-ID-variables.h.80/Country_Sample-see-V4-for-codes-for-whole-nation-states-/fVariable/ZA5800_V4)
 
@@ -282,13 +330,11 @@ issp11_w %>%
          justsalud = as.numeric(justsalud)) %>% 
   summarise(inefsalud = mean(inefsalud, na.rm = T), justsalud = mean(justsalud, na.rm = T) ) %>% 
 ggplot(aes(x=inefsalud, y = justsalud, color = C_ALPHAN)) +
-  geom_point(alpha = 0.5, size = 2) + 
+  geom_point(alpha = 0.5, size = 2.2) + 
   geom_text(aes(label = C_ALPHAN), vjust = 1.2,
             color="black", size= 3.5, fontface = "bold",
             show.legend = FALSE) +
   scale_fill_npg() + guides(color = F) + 
-  labs(title = " Inefficiency health system and justices health perception (averiage by country)", y = "Justice\n(in average by country)", x= "Inneficiency (in average by country)", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
-
-
+  labs(title = " Figura 12. Inefficiency health system and justices health perception (averiage by country)", y = "Justice\n(in average by country)", x= "Inneficiency (in average by country)", fill = "", caption = "Fuente: ISSP Health and HealthCare (2011)")
 ```
 

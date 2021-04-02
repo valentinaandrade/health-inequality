@@ -313,12 +313,44 @@ issp19$sex <- car::recode(issp19$sex, recodes = c("1='Hombre';2='Mujer'"),
                           levels =c('Hombre','Mujer'))
 table(issp19$sex)  
 
+# Region ------------------------------------------------------------------
+find_var(issp19, "REGION")
+
+### 1999
+issp99 <- issp99 %>% mutate(region_rm = case_when(region %in% 1:12 ~ "No RM",
+                                                  region %in% 13 ~ "RM",
+                                                  TRUE ~ NA_character_))
+
+
+
+table(issp99$region_rm)
+### 2009
+table(issp09$Fregion)
+issp09 <- issp09 %>% mutate(region_rm = case_when(Fregion %in% 1:12 ~ "No RM",
+                                                  Fregion %in% 13 ~ "RM",
+                                                  TRUE ~ NA_character_))
+
+
+
+table(issp09$region_rm)
+
+### 2019
+table(issp19$REGION)
+issp19 <- issp19 %>% mutate(region_rm = case_when(REGION %in% 1:12 ~ "No RM",
+                                                  REGION %in% 14:16 ~ "No RM",
+                                                  REGION %in% 13 ~ "RM",
+                                                  TRUE ~ NA_character_))
+
+
+
+table(issp19$region_rm)
+
 
 # 6. Merge ISSP 99-09-19-11 --------------------------------------------------
 
 issp <- bind_rows(issp99,issp09,issp19,issp11)
 issp <- issp %>% 
-  select(year, sex, age,pospol, educ, pchhinc, pchhinc_a,
+  select(year, sex, age, region_rm, pospol, educ, pchhinc, pchhinc_a,
          red,justsalud,justeduca,factor)
 
 
