@@ -67,9 +67,10 @@ ggplot(aes(x = date, y = prop,  color = justsalud)) +
 
 ```{r, echo = F}
 issp %>%
-  mutate(justsalud = as.numeric(justsalud),
-         justsalud = if_else(justsalud %in% c(5,4), "Muy injusto y algo injusto",
-                               ifelse(justsalud %in% c(1,2), "Muy justo y algo justo", "Ni justo ni injusto"))) %>% 
+  mutate(justsalud_d = as.numeric(justsalud),
+         justsalud_d = if_else(justsalud_d %in% c(1,2), "Muy injusto y algo injusto",
+                               if_else(justsalud_d %in% c(5,4), "Muy justo y algo justo",
+                                      if_else(justsalud_d == 3, "Ni justo ni injusto", NA_character_)))) %>% 
   group_by(date, justsalud) %>% 
   summarise(n = n()) %>% 
   mutate(prop = round(n/sum(n),3)*100) %>% 
@@ -87,16 +88,18 @@ ggplot(aes(x = date, y = prop,  color = justsalud)) +
 ```{r tabl, echo = F}
 issp_table <- issp %>% select(date, justsalud,  sex, age, educ, region_rm) %>%
   filter(date != "2011-1-1") %>% 
-  mutate(justsalud = as.numeric(justsalud),
-         justsalud = if_else(justsalud %in% c(5,4), "Muy injusto y algo injusto",
-                               ifelse(justsalud %in% c(1,2), "Muy justo y algo justo", "Ni justo ni injusto"))) %>% 
-  pivot_longer(cols = -c(date, justsalud) ,names_to = "variable", values_to = "values") %>% 
-  group_by(date, variable, values,justsalud, ) %>% 
-  summarise(n = n()) %>% 
+  mutate(justsalud_d = as.numeric(justsalud),
+         justsalud_d = if_else(justsalud_d %in% c(1,2), "Muy injusto y algo injusto",
+                               if_else(justsalud_d == 3, "Ni justo ni injusto",
+                                                                      if_else(justsalud_d %in% c(5,4), "Muy justo y algo justo", NA_character_)))) %>% select(-justsalud)  %>% 
+  pivot_longer(cols = -c(date, justsalud_d) ,names_to = "variable", values_to = "values") %>% 
+  group_by(date, variable, values,justsalud_d) %>%
+  summarise(n = n()) %>%  
   mutate(prop = round(n/sum(n),3)*100) %>%
   ungroup() %>% 
-  pivot_wider(names_from = c(date,justsalud),values_from = c(n,prop)) %>% 
-  select(1:2,starts_with("p"))
+  pivot_wider(names_from = c(date,justsalud_d),values_from = c(n,prop)) %>% 
+  select(1:2,starts_with("p")) %>% 
+  select(1,2,3,5,4,6,7,9,8,10,11,13,12,14)
 
 issp_table$variable <- car::recode(issp_table$variable,
                           "'educ'='Nivel\n educacional';
@@ -109,11 +112,10 @@ issp_table$variable <- car::recode(issp_table$variable,
 ```{r tab2, echo= F, results='asis'}
 issp_table %>%
    knitr::kable(digits = 2, row.names = F,  booktabs = T,  format = "html",
-             col.names = c("Variable", "Valores", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)","Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)"),caption = "<b>Tabla 1</b>: Estadísticos descriptivos para justicia en salud") %>% 
+             col.names = c("Variable", "Valores", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)", "NA", "Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)","NA","Muy injusto \ny algo injusto (%)", "Ni injusto \ny ni justo (%)", "Muy justo \ny algo justo (%)", "NA"),caption = "<b>Tabla 1</b>: Estadísticos descriptivos para justicia en salud") %>% 
    kableExtra::collapse_rows(columns = 1:2, row_group_label_position = 'stack') %>% 
-            add_header_above(c(" " = 2, "1999" = 3,"2009" = 3, "2019" = 3)) %>% 
+            add_header_above(c(" " = 2, "1999" = 4,"2009" = 4, "2019" = 4)) %>% 
             kableExtra::kable_styling(bootstrap_options = c("striped", "hold_position"), full_width = F)   %>% 
-            kableExtra::column_spec(1, width = "1cm") %>%
   kableExtra::footnote(general = "Fuente: ISSP Social Inequality (1999, 2009, 2019)", general_title = "") 
 
 ```
