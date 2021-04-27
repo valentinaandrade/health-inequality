@@ -1,0 +1,92 @@
+---
+title: "Descriptive report"
+subtitle: "MOVID-IMPACT survey"
+author: 'Valentina Andrade'
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    depth: 2
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_float: yes
+  word_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+lang: es-CL
+always_allow_html: yes
+---
+```{r, echo=FALSE, eval = FALSE}
+htmltools::img(src = knitr::image_uri("../input/css/icon-192.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;')
+options(encoding = 'UTF-8')
+```
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F, results = 'asis')
+
+library(knitr);  options(knitr.kable.NA = "No sabe/No responde", kableExtra.auto_format = FALSE, scipen = 999)
+
+library(ggplot2);library(ggthemes)
+theme_set(theme_hc() + theme(axis.title = element_text(size = 9)))
+```
+
+```{r packages, echo = F, message=FALSE, warning= F}
+# 1. Cargar paquetes
+pacman::p_load(haven, tidyverse, sjPlot, sjmisc, sjlabelled)
+```
+
+```{r load, echo = F}
+load("../input/data/movid-proc.RData")
+```
+
+# D6
+
+```{r, echo = F}
+sjt.xtab(data_proc$d6, data_proc$sexo, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+sjt.xtab(data_proc$d6, data_proc$educ_3cat, weight.by = data_proc$factor_expansion, encoding = "UTF-8",
+         show.col.prc=TRUE,
+         show.summary=FALSE)
+sjt.xtab(data_proc$d6, data_proc$b2, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+
+```
+ 
+# D8
+
+```{r, echo = F}
+sjt.xtab(data_proc$d8, data_proc$sexo, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+sjt.xtab(data_proc$d8, data_proc$educ_3cat, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+sjt.xtab(data_proc$d8, data_proc$b2, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+
+```
+
+
+# Crónicos
+```{r, echo = F}
+sjPlot::tab_stackfrq(data_proc[,c("c1_1", "c1_2", "c1_3","c1_4", "c1_5","c1_6", "c1_7", "c1_8", "c1_9", "cronicos")],  alternate.rows = TRUE,
+                     show.n = TRUE, weight.by = data_proc$factor_expansion)
+
+```
+
+# Módulo F
+```{r, echo = F}
+sjPlot::tab_stackfrq(data_proc[,c("f3_1", "f3_2", "f3_3","f3_4", "f3_5")],  alternate.rows = TRUE,
+                     show.n = TRUE, weight.by = data_proc$factor_expansion)
+
+
+sjPlot::tab_stackfrq(data_proc[,c("f4_1", "f4_2", "f4_3","f4_4")],  alternate.rows = TRUE,
+                     show.n = TRUE, weight.by = data_proc$factor_expansion)
+
+sjPlot::tab_stackfrq(data_proc[,c("f5_1", "f5_2", "f6")],  alternate.rows = TRUE,
+                     show.n = TRUE, weight.by = data_proc$factor_expansion)
+
+```
+
