@@ -190,3 +190,12 @@ sjt.xtab(data_proc$f6, data_proc$edad_cat, weight.by = data_proc$factor_expansio
 
 sjt.xtab(data_proc$f5_1, data_proc$educ_4cat, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
          show.summary=FALSE)
+
+sjt.xtab(data_proc$f3_1, data_proc$educ_4cat, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+
+sjt.xtab(data_proc$f3_1, data_proc$sexo, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
+
+sjt.xtab(data_proc$f3_1, data_proc$edad_cat, weight.by = data_proc$factor_expansion, encoding = "UTF-8", show.col.prc=TRUE,
+         show.summary=FALSE)
